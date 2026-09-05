@@ -1,28 +1,47 @@
 main_tabs_order:
-  - "ImageGen":
-    - "txt2img"
-    - "img2img"
-    - "Inpaint"
-    - "Outpaint"
-    - "Hires. fix"
+  - "ImageGen"
 
   - "ImageEdit":
     - "Instruction Edit":
-      - "Qwen-Image-Edit"
+      - "FireRed-Image-Edit"
+      - "LongCat-Image-Edit"
+      - "ChronoEdit"
       - "Flux-Kontext-Dev"
-      - "OmniGen2-Image_Edit"
     - "Reference Edit":
       - "ByteDance USO"
     - "Inpaint":
-      - "FLUX-Fill-Dev Inpaint"
+      - "Z-Image Inpaint"
       - "Qwen-Image Inpaint"
+      - "FLUX-Fill-Dev Inpaint"
       - "Flux.1-Dev-OneReward Inpaint"
     - "Outpaint":
-      - "FLUX-Fill-Dev Outpaint"
+      - "Z-Image Outpaint"
       - "Qwen-Image Outpaint"
+      - "FLUX-Fill-Dev Outpaint"
       - "Flux.1-Dev-OneReward Outpaint"
+    - "Layered":
+      - "Qwen-Image Layered"
 
   - "VideoGen":
+    - "H3":
+      - "H3 FL2VA"
+      - "H3 REF2VA"
+    - "LTX-2.5":
+      - "LTX-2.5 T2V"
+      - "LTX-2.5 I2V"
+      - "LTX-2.5 TA2V"
+      - "LTX-2.5 IA2V"
+      - "LTX-2.5 FLF2V"
+    - "LTX-2.3":
+      - "LTX-2.3 T2V"
+      - "LTX-2.3 I2V"
+      - "LTX-2.3 TA2V"
+      - "LTX-2.3 IA2V"
+      - "LTX-2.3 FLF2V"
+      - "LTX-2.3 Control"
+    - "LTX-2":
+      - "LTX-2 TI2V"
+      - "LTX-2 Control"
     - "wan2.2":
       - "txt2video"
       - "img2video"
@@ -34,14 +53,31 @@ main_tabs_order:
       - "TI2V"
       - "Animate"
     - "wan2.1":
+      - "wan2.1 txt2video"
+      - "wan2.1 img2video"
       - "txt2video(alpha)"
+      - "wan2.1 wanmove"
+      - "wan2.1 infinitetalk":
+        - "wan2.1 infinitetalk single"
+        - "wan2.1 infinitetalk multi"
+    - "HunyuanVideo-1.5":
+      - "HunyuanVideo-1.5 T2V"
+      - "HunyuanVideo-1.5 I2V"
     - "HuMo":
       - "HuMo"
+    - "Kandinsky":
+      - "Kandinsky T2V"
+      - "Kandinsky I2V"
       
   - "AudioGen":
+    - "ACE-Step 1.5":
+      - "txt2music (v1.5)"
+      - "music2music (v1.5)"
     - "ACE-Step":
       - "txt2music"
       - "music2music"
+    - "MiniMax":
+      - "txt2music(music3)"
 
   - "3DGen":
     - "simple_img_to_3D":
@@ -55,15 +91,15 @@ main_tabs_order:
       - "Depth-Anything-Tensorrt"
       - "Dwpose-Tensorrt"
       - "Video-Depth-Anything"
+    - "Prompt Enhancer":
+      - "ERNIE Image Prompt Enhancer"
+      - "LTX-2 Prompt Gen"
+      - "NewBie XML Generator"
     - "VL":
       - "QwenVL"
     - "Tagger":
       - "WD14 Tagger"
       - "CLIP Interrogator"
-    - "Media Info"
-    - "Fill":
-      - "Inpaint"
-      - "Outpaint"
     - "RMBG"
     - "RIFE"
     - "Upscale":

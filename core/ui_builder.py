@@ -5,13 +5,16 @@ from core import job_manager
 
 from core.backend_manager import backend_manager
 
-def build_gradio_ui(demo: gr.Blocks, ui_tree: dict, ui_modules: dict, layout_config: dict, share_mode: bool):
+def build_gradio_ui(demo: gr.Blocks, ui_tree: dict, ui_modules: dict, layout_config: dict, share_mode: bool = None):
     all_components = {}
     modules_with_handlers = []
     module_component_map = {}
 
     ordered_main_tabs = layout_config.get("main_tabs_order", [])
     ordered_sub_tabs_map = layout_config.get("sub_tabs_order", {})
+
+    if share_mode is None:
+        share_mode = os.getenv("GRADIO_SHARE", "False").lower() in ("true", "1")
 
     if share_mode:
         print("Share mode is enabled. Disabling the History tab for privacy.")
@@ -135,7 +138,7 @@ def _create_and_bind_module_ui(module, all_components, module_component_map, mod
                 fn=submit_job,
                 inputs=flat_inputs, 
                 outputs=[job_id_state, polling_trigger, last_status_message_state, status_bar],
-                show_api=False
+                api_name=False
             )
 
         polling_trigger.change(
@@ -143,7 +146,7 @@ def _create_and_bind_module_ui(module, all_components, module_component_map, mod
             inputs=[job_id_state, polling_trigger, last_status_message_state],
             outputs=[status_bar] + main_outputs + [polling_trigger, last_status_message_state],
             show_progress="hidden",
-            show_api=False
+            api_name=False
         )
 
 def _collect_module_inputs(components):
