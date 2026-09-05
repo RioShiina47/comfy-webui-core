@@ -48,49 +48,23 @@ if not COMFYUI_PATH or not os.path.isdir(COMFYUI_PATH):
     checked_path = os.getenv("COMFYUI_PATH") or config.get("comfyui_path")
     raise ValueError(
         f"Error: 'comfyui_path' configuration is invalid or does not exist.\n"
-        f"Please check your 'yaml/config.yaml', 'custom/yaml/config.yaml', or .env file, "
+        f"Please check your 'yaml/config.yaml' or set COMFYUI_PATH environment variable, "
         f"and ensure the path '{checked_path}' is a valid directory."
     )
 
-DEV_COPY_WORKFLOW_TO_CLIPBOARD = config.get("developer_copy_workflow_to_clipboard", False)
-DEV_SAVE_WORKFLOW_TO_JSON = config.get("developer_save_workflow_to_json", True)
-
-
-HTTP_PROXY = os.getenv("HTTP_PROXY", config.get("http_proxy", None))
-HTTPS_PROXY = os.getenv("HTTPS_PROXY", config.get("https_proxy", None))
-
-proxy_set_message = []
-if HTTP_PROXY:
-    os.environ['HTTP_PROXY'] = HTTP_PROXY
-    proxy_set_message.append(f"HTTP_PROXY set to {HTTP_PROXY}")
-if HTTPS_PROXY:
-    os.environ['HTTPS_PROXY'] = HTTPS_PROXY
-    proxy_set_message.append(f"HTTPS_PROXY set to {HTTPS_PROXY}")
-
-no_proxy_list = ['127.0.0.1', 'localhost', 'backend', 'backend_defalut', 'backend_3d']
-existing_no_proxy = os.environ.get('NO_PROXY', '')
-if existing_no_proxy:
-    no_proxy_list.extend([item.strip() for item in existing_no_proxy.split(',')])
-final_no_proxy = ",".join(sorted(list(set(no_proxy_list))))
-os.environ['NO_PROXY'] = final_no_proxy
-proxy_set_message.append(f"NO_PROXY set to {final_no_proxy}")
-
+SAVE_WORKFLOW_TO_JSON = config.get("save_workflow_to_json", True)
 
 CIVITAI_API_KEY = os.getenv("CIVITAI_API_KEY", config.get("civitai_api_key", ""))
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN", config.get("huggingface_token", ""))
 
-SERVER_PORT = int(os.getenv("SERVER_PORT", config.get("server_port", 7888)))
-GRADIO_SERVER_NAME = os.getenv("GRADIO_SERVER_NAME", config.get("gradio_server_name", "127.0.0.1"))
-
 ENABLE_LOGIN = config.get("enable_login", False)
 LOGIN_CREDENTIALS = config.get("login_credentials", [])
-SHARE_GRADIO = config.get("share_gradio", False)
 
 if ENABLE_LOGIN:
     if not LOGIN_CREDENTIALS or not isinstance(LOGIN_CREDENTIALS, list):
         raise ValueError(
             "Error: 'enable_login' is enabled, but 'login_credentials' is not set correctly in the configuration.\n"
-            "Please add your username and password in 'custom/yaml/config.yaml'."
+            "Please add your username and password in 'yaml/config.yaml'."
         )
     
     for cred in LOGIN_CREDENTIALS:
@@ -101,8 +75,6 @@ if ENABLE_LOGIN:
             )
 
 AUTO_DOWNLOAD_MODELS = config.get("auto_download_models", True)
-
-HF_CACHE_PATH = os.getenv("HF_CACHE_PATH", config.get("hf_cache_path", None))
 
 COMFYUI_INPUT_PATH = os.path.join(COMFYUI_PATH, "input")
 COMFYUI_OUTPUT_PATH = os.path.join(COMFYUI_PATH, "output")
@@ -122,23 +94,13 @@ print(f"  Output Directory: {COMFYUI_OUTPUT_PATH}")
 print(f"  LoRA Directory: {LORA_DIR}")
 print(f"  Embedding Directory: {EMBEDDING_DIR}")
 print(f"  JSON Save Directory: {JSON_SAVE_PATH}")
-print(f"  Server Port: {SERVER_PORT}")
-print(f"  Server Name: {GRADIO_SERVER_NAME}")
-print(f"  Share Gradio: {SHARE_GRADIO}")
 print(f"  Login Enabled: {ENABLE_LOGIN}")
 if ENABLE_LOGIN:
     print(f"  Login Users Found: {len(LOGIN_CREDENTIALS)}")
-print(f"  Dev: Copy Workflow to Clipboard: {DEV_COPY_WORKFLOW_TO_CLIPBOARD}")
-print(f"  Dev: Save Workflow to JSON: {DEV_SAVE_WORKFLOW_TO_JSON}")
+print(f"  Save Workflow to JSON: {SAVE_WORKFLOW_TO_JSON}")
 print(f"  Auto Download Models: {AUTO_DOWNLOAD_MODELS}")
-print(f"  HTTP Proxy: {HTTP_PROXY if HTTP_PROXY else 'Not set'}")
-print(f"  HTTPS Proxy: {HTTPS_PROXY if HTTPS_PROXY else 'Not set'}")
-if proxy_set_message:
-    for msg in proxy_set_message:
-        print(f"  - Env Var: {msg}")
 print(f"  Civitai API Key: {'Set' if CIVITAI_API_KEY else 'Not set'}")
 print(f"  HuggingFace Token: {'Set' if HUGGINGFACE_TOKEN else 'Not set'}")
-print(f"  HuggingFace Cache: {HF_CACHE_PATH if HF_CACHE_PATH else 'Not set'}")
 print("="*50)
 
 os.makedirs(COMFYUI_INPUT_PATH, exist_ok=True)

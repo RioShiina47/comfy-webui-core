@@ -7,151 +7,100 @@ import re
 import sys
 
 from . import node_info_manager
-from .yaml_loader import load_and_merge_yaml
-
-FRONTEND_DIR = os.path.dirname(os.path.dirname(__file__))
-BASE_RECIPE_DIR = os.path.join(FRONTEND_DIR, "module", "image_gen", "workflow_recipes")
-CUSTOM_RECIPE_DIR = os.path.join(FRONTEND_DIR, "custom", "workflow_recipes")
+from .yaml_loader import load_and_merge_yaml, load_and_merge_yaml_from_module, ROOT_DIR
 
 
 class WorkflowAssembler:
-    def __init__(self, recipe_path, dynamic_values=None, base_path=None):
+    _global_injectors_cache = {}
+
+    def __init__(self, recipe, injector_order: list = None, base_path: str = None, dynamic_values: dict = None):
         self.base_path = base_path
         self.node_counter = 0
         self.workflow = {}
         self.node_map = {}
         self.loaded_local_injectors = {}
-        
-        self._load_injector_config()
+        self.injector_order = injector_order or []
 
-        self.recipe = self._load_and_merge_recipe(recipe_path, dynamic_values or {})
-    
-    def _load_injector_config(self):
-        try:
-            injector_config = load_and_merge_yaml("injectors.yaml")
-            definitions = injector_config.get("injector_definitions", {})
-            self.injector_order = injector_config.get("injector_order", [])
-            self.global_injectors = {}
+        if isinstance(recipe, (str, os.PathLike)):
+            recipe_path = str(recipe)
+            if not os.path.isabs(recipe_path):
+                if not os.path.exists(recipe_path) and base_path:
+                    recipe_path = os.path.join(base_path, recipe_path)
+            with open(recipe_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            if dynamic_values:
+                for k, v in dynamic_values.items():
+                    if v is not None:
+                        content = content.replace(f"{{{{ {k} }}}}", str(v))
+            self.recipe = yaml.safe_load(content)
+        elif isinstance(recipe, dict):
+            self.recipe = recipe
+        else:
+            raise TypeError(f"WorkflowAssembler expects a recipe dict or file path, but got {type(recipe)}.")
 
-            for chain_type, config in definitions.items():
-                module_path = config.get("module")
-                if not module_path:
-                    print(f"Warning: Injector '{chain_type}' in injectors.yaml is missing 'module' path.")
-                    continue
-                try:
-                    module = importlib.import_module(module_path)
-                    if hasattr(module, 'inject'):
-                        self.global_injectors[chain_type] = module.inject
-                        print(f"Successfully registered global injector: {chain_type} from {module_path}")
-                    else:
-                        print(f"Warning: Module '{module_path}' for injector '{chain_type}' does not have an 'inject' function.")
-                except ImportError as e:
-                    print(f"Error importing module '{module_path}' for injector '{chain_type}': {e}")
-            
-            if not self.injector_order:
-                 print("Warning: 'injector_order' is not defined in injectors.yaml. Using definition order.")
-                 self.injector_order = list(definitions.keys())
-
-        except Exception as e:
-            print(f"FATAL: Could not load or parse injectors.yaml. Dynamic chains will not work. Error: {e}")
-            self.injector_order = []
-            self.global_injectors = {}
-
-
-    def _load_and_merge_recipe(self, recipe_filename, dynamic_values, search_context_dir=None):
-        normalized_filename = os.path.normpath(recipe_filename)
-        
-        search_paths = []
-        if search_context_dir:
-            search_paths.append(os.path.join(search_context_dir, normalized_filename))
-        if self.base_path:
-            search_paths.append(os.path.join(self.base_path, normalized_filename))
-        search_paths.append(os.path.join(CUSTOM_RECIPE_DIR, normalized_filename))
-        search_paths.append(os.path.join(BASE_RECIPE_DIR, normalized_filename))
-        
-        recipe_path_to_use = None
-        for path in search_paths:
-            if os.path.exists(path):
-                recipe_path_to_use = path
-                break
-
-        if not recipe_path_to_use:
-            raise FileNotFoundError(f"Recipe file not found in any search path: {normalized_filename}")
-
-        with open(recipe_path_to_use, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        for key, value in dynamic_values.items():
-            if value is not None:
-                content = content.replace(f"{{{{ {key} }}}}", str(value))
-        
-        main_recipe = yaml.safe_load(content)
-        
-        merged_recipe = { 'nodes': {}, 'connections': [], 'ui_map': {} }
-        for key in self.injector_order:
-             if key.startswith('dynamic_'):
-                merged_recipe[key] = {}
-        
-        parent_recipe_dir = os.path.dirname(recipe_path_to_use)
-        for import_path_template in main_recipe.get('imports', []):
-            import_path = import_path_template
-            for key, value in dynamic_values.items():
-                if value is not None:
-                    import_path = import_path.replace(f"{{{{ {key} }}}}", str(value))
-            try:
-                imported_recipe = self._load_and_merge_recipe(import_path, dynamic_values, search_context_dir=parent_recipe_dir)
-                for key in merged_recipe:
-                    if key == 'nodes' or key.startswith('dynamic_'):
-                        merged_recipe[key].update(imported_recipe.get(key, {}))
-                    elif key == 'connections':
-                        merged_recipe[key].extend(imported_recipe.get(key, []))
-                    elif key == 'ui_map':
-                        merged_recipe[key].update(imported_recipe.get(key, {}))
-            except FileNotFoundError:
-                print(f"Warning: Optional recipe partial '{import_path}' not found. Skipping.")
-
-        for key in list(merged_recipe.keys()) + list(main_recipe.keys()):
-             if key not in merged_recipe and not key.startswith('dynamic_'): continue
-             if key == 'nodes' or key.startswith('dynamic_'):
-                 merged_recipe.setdefault(key, {}).update(main_recipe.get(key, {}))
-             elif key == 'connections':
-                 merged_recipe[key].extend(main_recipe.get(key, []))
-             elif key == 'ui_map':
-                 merged_recipe[key].update(main_recipe.get(key, {}))
-        
-        return merged_recipe
-
-    def _get_injector_function(self, chain_type):
+    def _get_injector_function(self, chain_type: str):
         if chain_type in self.loaded_local_injectors:
             return self.loaded_local_injectors[chain_type]
 
-        if self.base_path:
-            injector_module_name = chain_type.replace('dynamic_', '').replace('_chains', '_injector')
-            injector_file_path = os.path.join(self.base_path, f"{injector_module_name}.py")
-            
-            if os.path.exists(injector_file_path):
+        feature_name = chain_type[8:-7] if (chain_type.startswith('dynamic_') and chain_type.endswith('_chains')) else chain_type
+        injector_filename = f"{feature_name}_injector.py"
+
+        if self.base_path and os.path.isdir(self.base_path):
+            local_file_path = None
+            for root, _, files in os.walk(self.base_path):
+                if injector_filename in files:
+                    local_file_path = os.path.join(root, injector_filename)
+                    break
+
+            if local_file_path:
                 try:
-                    spec = importlib.util.spec_from_file_location(injector_module_name, injector_file_path)
+                    spec = importlib.util.spec_from_file_location(f"{feature_name}_injector", local_file_path)
                     module = importlib.util.module_from_spec(spec)
                     
                     original_sys_path = sys.path[:]
+                    local_dir = os.path.dirname(local_file_path)
+                    if local_dir not in sys.path:
+                        sys.path.insert(0, local_dir)
                     if self.base_path not in sys.path:
                         sys.path.insert(0, self.base_path)
                     
                     spec.loader.exec_module(module)
-                    
                     sys.path[:] = original_sys_path
 
-                    if hasattr(module, 'inject'):
-                        print(f"Dynamically loaded local injector: {injector_file_path}")
+                    if hasattr(module, 'inject') and callable(module.inject):
+                        print(f"Dynamically loaded local injector: {local_file_path}")
+                        target_chain_type = getattr(module, 'CHAIN_TYPE', chain_type)
                         self.loaded_local_injectors[chain_type] = module.inject
+                        if target_chain_type != chain_type:
+                            self.loaded_local_injectors[target_chain_type] = module.inject
                         return module.inject
                 except Exception as e:
-                    print(f"Error loading local injector {injector_file_path}: {e}")
-        
-        if chain_type in self.global_injectors:
-            return self.global_injectors[chain_type]
-            
+                    print(f"Error loading local injector {local_file_path}: {e}")
+
+        if chain_type in WorkflowAssembler._global_injectors_cache:
+            return WorkflowAssembler._global_injectors_cache[chain_type]
+
+        global_injector_dir = os.path.join(ROOT_DIR, "chain_injectors")
+        global_file_path = os.path.join(global_injector_dir, injector_filename)
+
+        if os.path.exists(global_file_path):
+            mod_name = f"{feature_name}_injector"
+            rel_path = f"chain_injectors.{mod_name}"
+            try:
+                if ROOT_DIR not in sys.path:
+                    sys.path.insert(0, ROOT_DIR)
+                module = importlib.import_module(rel_path)
+                target_chain_type = getattr(module, 'CHAIN_TYPE', chain_type)
+                if hasattr(module, 'inject') and callable(module.inject):
+                    func = module.inject
+                    WorkflowAssembler._global_injectors_cache[target_chain_type] = func
+                    print(f"Successfully registered global injector (lazy): {target_chain_type} from {rel_path}")
+                    return func
+                else:
+                    print(f"Warning: Module '{rel_path}' for injector '{chain_type}' does not have an 'inject' function.")
+            except Exception as e:
+                print(f"Error importing module '{rel_path}' for injector '{chain_type}': {e}")
+
         return None
 
     def _get_unique_id(self):
@@ -170,13 +119,6 @@ class WorkflowAssembler:
         for name, details in all_inputs.items():
             config = details[1] if len(details) > 1 and isinstance(details[1], dict) else {}
             template["inputs"][name] = config.get("default", None)
-            if isinstance(details, list) and len(details) > 0 and details[0] == "COMFY_DYNAMICCOMBO_V3" and isinstance(config, dict):
-                for option in config.get("options", []):
-                    opt_inputs = option.get("inputs", {})
-                    for group in [opt_inputs.get("required", {}), opt_inputs.get("optional", {})]:
-                        for sub_name, sub_details in group.items():
-                            sub_cfg = sub_details[1] if len(sub_details) > 1 and isinstance(sub_details[1], dict) else {}
-                            template["inputs"][f"{name}.{sub_name}"] = sub_cfg.get("default", None)
         return template
 
     def assemble(self, ui_values):
@@ -199,10 +141,8 @@ class WorkflowAssembler:
             if 'title' in details: node_data['_meta']['title'] = details['title']
             if 'params' in details:
                 for param, value in details['params'].items():
-                    node_data['inputs'][param] = value
-                    for input_key in list(node_data['inputs'].keys()):
-                        if input_key.endswith(f".{param}"):
-                            node_data['inputs'][input_key] = value
+                    if param in node_data['inputs']: node_data['inputs'][param] = value
+                    else: print(f"Warning: Param '{param}' in recipe for node '{name}' does not exist in '{class_type}'. Skipping.")
             self.workflow[unique_id] = node_data
 
         for ui_key, target in self.recipe.get('ui_map', {}).items():

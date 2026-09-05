@@ -2,10 +2,23 @@ import os
 import random
 import shutil
 import traceback
+import datetime
 from PIL import Image
 import numpy as np
+import inspect
+import gradio as gr
+import imageio.v2 as iio
 from core.config import COMFYUI_INPUT_PATH
-from core.comfy_api import run_workflow_and_get_output
+
+def get_filename_prefix() -> str:
+    """Generates a timestamp-based filename prefix: YYYY-MM-DD-HH-MM-SS-mmm."""
+    now = datetime.datetime.now()
+    return now.strftime('%Y-%m-%d-%H-%M-%S') + f"-{now.microsecond // 1000:03d}"
+
+def get_textbox_copy_kwargs() -> dict:
+    if hasattr(gr, "Textbox") and "buttons" in inspect.signature(gr.Textbox.__init__).parameters:
+        return {"buttons": ["copy"]}
+    return {"show_copy_button": True}
 
 def save_temp_image(img):
     if not isinstance(img, Image.Image): return None
@@ -60,6 +73,7 @@ def handle_seed(seed_value: int, max_val: int = 2**32 - 1) -> int:
     return int(seed_value)
 
 def create_simple_run_generation(process_inputs_func, get_ui_updates_func):
+    from core.comfy_api import run_workflow_and_get_output
     def run_generation(ui_values):
         final_files = []
         try:
@@ -84,6 +98,7 @@ def create_simple_run_generation(process_inputs_func, get_ui_updates_func):
     return run_generation
 
 def create_batched_run_generation(process_inputs_func, get_ui_updates_func):
+    from core.comfy_api import run_workflow_and_get_output
     def run_generation(ui_values):
         all_output_files = []
         try:
@@ -120,3 +135,50 @@ def create_batched_run_generation(process_inputs_func, get_ui_updates_func):
         yield get_ui_updates_func("Status: Loaded successfully!", all_output_files)
         
     return run_generation
+
+def get_media_metadata(file_obj, is_video=False):
+    default_video_meta = {'width': 0, 'height': 0, 'fps': 24, 'duration': 0}
+    default_image_meta = {'width': 0, 'height': 0, 'fps': 24}
+
+    if file_obj is None:
+        return default_video_meta if is_video else default_image_meta
+
+    if is_video:
+        try:
+            try:
+                reader = iio.get_reader(file_obj)
+            except Exception:
+                reader = iio.get_reader(file_obj, format='ffmpeg')
+
+            with reader:
+                meta = reader.get_meta_data()
+                size = meta.get('size', meta.get('source_size', (0, 0)))
+                width, height = size
+                fps = meta.get('fps', 24)
+                duration = meta.get('duration', 0)
+                return {'width': width, 'height': height, 'fps': fps, 'duration': duration}
+        except Exception as e:
+            print(f"imageio failed for '{file_obj}': {e}. Falling back to pydub for audio duration.")
+            try:
+                from pydub import AudioSegment
+                audio = AudioSegment.from_file(file_obj)
+                duration = audio.duration_seconds
+                return {'width': 0, 'height': 0, 'fps': 0, 'duration': duration}
+            except Exception as pydub_e:
+                print(f"pydub also failed for '{file_obj}': {pydub_e}")
+                return default_video_meta
+    else:
+        if isinstance(file_obj, Image.Image):
+            width, height = file_obj.size
+            return {'width': width, 'height': height, 'fps': 24}
+        elif isinstance(file_obj, str):
+            try:
+                with Image.open(file_obj) as img:
+                    width, height = img.size
+                    return {'width': width, 'height': height, 'fps': 24}
+            except Exception as e:
+                print(f"PIL failed to open '{file_obj}': {e}")
+                return default_image_meta
+        else:
+            print(f"Warning: Expected PIL Image or path but got {type(file_obj)}")
+            return default_image_meta

@@ -4,10 +4,10 @@ import os
 import sys
 import importlib
 from core.config import (
-    SERVER_PORT, ENABLE_LOGIN, LOGIN_CREDENTIALS, SHARE_GRADIO, 
-    COMFYUI_OUTPUT_PATH, AUTO_DOWNLOAD_MODELS, GRADIO_SERVER_NAME
+    ENABLE_LOGIN, LOGIN_CREDENTIALS, 
+    COMFYUI_OUTPUT_PATH, AUTO_DOWNLOAD_MODELS
 )
-from core.ui_loader import discover_ui_modules, load_ui_layout, load_ui_list
+from core.ui_loader import discover_ui_modules, load_ui_layout
 from core.ui_builder import build_gradio_ui
 
 from core import job_manager, node_info_manager, backend_manager
@@ -38,11 +38,7 @@ function() {
 def discover_and_register_mcp_modules(app: gr.Blocks):
     print("="*50)
     print("Discovering and registering MCP modules...")
-    
-    if 'custom' not in sys.path:
-        sys.path.insert(0, 'custom')
-
-    ui_dirs_to_scan = ["module", "custom/module"]
+    ui_dirs_to_scan = ["module"]
     for ui_dir in ui_dirs_to_scan:
         if not os.path.isdir(ui_dir):
             continue
@@ -116,15 +112,14 @@ def main():
         print("Skipping automatic model check and download as per config.")
         print("="*50)
 
-    ui_include_list = load_ui_list()
-    ui_tree, ui_modules = discover_ui_modules(ui_include_list)
+    ui_tree, ui_modules = discover_ui_modules()
     layout_config = load_ui_layout()
     
-    with gr.Blocks(js=js_shortcut_code, title="Comfy web UI") as demo:
+    with gr.Blocks(title="Comfy web UI") as demo:
         gr.Markdown("# Comfy web UI")
         
         all_components, module_component_map, modules_with_handlers = build_gradio_ui(
-            demo, ui_tree, ui_modules, layout_config, SHARE_GRADIO
+            demo, ui_tree, ui_modules, layout_config
         )
 
         print("Binding custom event handlers...")
@@ -146,13 +141,11 @@ def main():
 
     print("Launching Gradio interface...")
     demo.queue().launch(
-        server_name=GRADIO_SERVER_NAME,
-        server_port=SERVER_PORT, 
         mcp_server=True, 
         pwa=True,
         auth=auth_credentials,
-        share=SHARE_GRADIO,
-        allowed_paths=[COMFYUI_OUTPUT_PATH]
+        allowed_paths=[COMFYUI_OUTPUT_PATH],
+        js=js_shortcut_code
     )
 
 if __name__ == "__main__":
