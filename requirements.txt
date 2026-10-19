@@ -2,3 +2,7 @@ gradio[mcp]
 requests
 websocket-client
 imageio
+pyyaml
+huggingface_hub
+tqdm
+pillow

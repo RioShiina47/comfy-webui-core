@@ -6,6 +6,12 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Build & Packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
 # Virtual Environments
 .Python
 env/
@@ -14,7 +20,6 @@ venv/
 
 # Gradio cache
 gradio_cached_examples/
-
 
 # IDE & OS Files
 # ---------------------------------

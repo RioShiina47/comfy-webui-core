@@ -8,7 +8,7 @@ import numpy as np
 import inspect
 import gradio as gr
 import imageio.v2 as iio
-from core.config import COMFYUI_INPUT_PATH
+from .config import COMFYUI_INPUT_PATH
 
 def get_filename_prefix() -> str:
     """Generates a timestamp-based filename prefix: YYYY-MM-DD-HH-MM-SS-mmm."""
@@ -73,7 +73,7 @@ def handle_seed(seed_value: int, max_val: int = 2**32 - 1) -> int:
     return int(seed_value)
 
 def create_simple_run_generation(process_inputs_func, get_ui_updates_func):
-    from core.comfy_api import run_workflow_and_get_output
+    from .comfy_api import run_workflow_and_get_output
     def run_generation(ui_values):
         final_files = []
         last_status = "Status: Initializing..."
@@ -105,7 +105,7 @@ def create_simple_run_generation(process_inputs_func, get_ui_updates_func):
     return run_generation
 
 def create_batched_run_generation(process_inputs_func, get_ui_updates_func):
-    from core.comfy_api import run_workflow_and_get_output
+    from .comfy_api import run_workflow_and_get_output
     def run_generation(ui_values):
         all_output_files = []
         last_status = "Status: Initializing..."

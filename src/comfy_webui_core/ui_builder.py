@@ -1,9 +1,9 @@
 import gradio as gr
 import os
 import time
-from core import job_manager
+from . import job_manager
 
-from core.backend_manager import backend_manager
+from .backend_manager import backend_manager
 
 def build_gradio_ui(demo: gr.Blocks, ui_tree: dict, ui_modules: dict, layout_config: dict, share_mode: bool = None):
     all_components = {}

@@ -119,7 +119,7 @@ def resolve_and_download_asset(
         from huggingface_hub import hf_hub_download
         token_to_use = hf_token
         if token_to_use is None:
-            from core.config import HUGGINGFACE_TOKEN
+            from .config import HUGGINGFACE_TOKEN
             token_to_use = HUGGINGFACE_TOKEN or os.getenv("HF_TOKEN") or None
         try:
             if progress: progress(0, desc=f"Downloading {source_name}")

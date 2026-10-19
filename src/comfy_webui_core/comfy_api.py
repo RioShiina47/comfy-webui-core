@@ -8,9 +8,9 @@ import shutil
 from pathlib import Path
 import os
 
-from core.backend_manager import backend_manager
-from core.config import SAVE_WORKFLOW_TO_JSON, JSON_SAVE_PATH
-from core.utils import get_filename_prefix
+from .backend_manager import backend_manager
+from .config import SAVE_WORKFLOW_TO_JSON, JSON_SAVE_PATH
+from .utils import get_filename_prefix
 
 
 def queue_prompt(prompt_workflow, client_id, extra_data=None):
@@ -469,7 +469,7 @@ def resolve_output_file_url(file_info: dict, request=None, local_download_path: 
     Resolve a ComfyUI output file (dict with 'filename', 'subfolder') to a Gradio URL.
     Prefers the local COMFYUI_OUTPUT_PATH if available and exists, otherwise falls back to local_download_path.
     """
-    from core.config import COMFYUI_OUTPUT_PATH
+    from .config import COMFYUI_OUTPUT_PATH
 
     filename = file_info.get('filename', '')
     subfolder = file_info.get('subfolder', '')

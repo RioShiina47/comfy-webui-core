@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "comfy-webui-core"
+version = "0.1.0"
+description = "Core framework for dynamic ComfyUI workflow generation, Gradio WebUI, and MCP tools"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "RioShiina47" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "gradio[mcp]",
+    "requests",
+    "websocket-client",
+    "imageio",
+    "pyyaml",
+    "huggingface_hub",
+    "tqdm",
+    "pillow",
+]
+
+[project.urls]
+Homepage = "https://github.com/RioShiina47/comfy-webui-core"
+Repository = "https://github.com/RioShiina47/comfy-webui-core"
+"Bug Tracker" = "https://github.com/RioShiina47/comfy-webui-core/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+comfy_webui_core = [
+    "chain_injectors/*.py",
+]

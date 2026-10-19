@@ -1,7 +1,7 @@
 import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from core.config import COMFYUI_BACKENDS
+from .config import COMFYUI_BACKENDS
 
 class BackendManager:
     _instance = None

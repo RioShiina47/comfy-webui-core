@@ -4,10 +4,10 @@ import shutil
 import requests
 from tqdm import tqdm
 from huggingface_hub import hf_hub_download
-from core.config import (
+from .config import (
     COMFYUI_PATH, CIVITAI_API_KEY, HUGGINGFACE_TOKEN
 )
-from core.yaml_loader import load_and_merge_yaml
+from .yaml_loader import load_and_merge_yaml
 
 def _get_civitai_final_url(model_version_id: str):
     initial_url = f"https://civitai.com/api/download/models/{model_version_id}"

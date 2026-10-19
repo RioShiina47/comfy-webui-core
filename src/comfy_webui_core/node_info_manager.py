@@ -1,8 +1,8 @@
 import requests
 from concurrent.futures import ThreadPoolExecutor
 
-from core.backend_manager import backend_manager
-from core.config import WAIT_FOR_ALL_BACKENDS
+from .backend_manager import backend_manager
+from .config import WAIT_FOR_ALL_BACKENDS
 
 _node_info_cache = {}
 

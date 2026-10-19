@@ -7,7 +7,8 @@ import re
 import sys
 
 from . import node_info_manager
-from .yaml_loader import load_and_merge_yaml, load_and_merge_yaml_from_module, ROOT_DIR
+from .yaml_loader import load_and_merge_yaml, load_and_merge_yaml_from_module
+from .context import get_app_root
 
 
 class WorkflowAssembler:
@@ -45,6 +46,7 @@ class WorkflowAssembler:
         feature_name = chain_type[8:-7] if (chain_type.startswith('dynamic_') and chain_type.endswith('_chains')) else chain_type
         injector_filename = f"{feature_name}_injector.py"
 
+        # 1. Local module injector search
         if self.base_path and os.path.isdir(self.base_path):
             local_file_path = None
             for root, _, files in os.walk(self.base_path):
@@ -56,14 +58,14 @@ class WorkflowAssembler:
                 try:
                     spec = importlib.util.spec_from_file_location(f"{feature_name}_injector", local_file_path)
                     module = importlib.util.module_from_spec(spec)
-                    
+
                     original_sys_path = sys.path[:]
                     local_dir = os.path.dirname(local_file_path)
                     if local_dir not in sys.path:
                         sys.path.insert(0, local_dir)
                     if self.base_path not in sys.path:
                         sys.path.insert(0, self.base_path)
-                    
+
                     spec.loader.exec_module(module)
                     sys.path[:] = original_sys_path
 
@@ -77,29 +79,48 @@ class WorkflowAssembler:
                 except Exception as e:
                     print(f"Error loading local injector {local_file_path}: {e}")
 
+        # 2. Global injectors cache
         if chain_type in WorkflowAssembler._global_injectors_cache:
             return WorkflowAssembler._global_injectors_cache[chain_type]
 
-        global_injector_dir = os.path.join(ROOT_DIR, "chain_injectors")
-        global_file_path = os.path.join(global_injector_dir, injector_filename)
+        # 3. Host application chain_injectors directory
+        app_root = get_app_root()
+        host_injector_dir = os.path.join(app_root, "chain_injectors")
+        host_file_path = os.path.join(host_injector_dir, injector_filename)
 
-        if os.path.exists(global_file_path):
+        if os.path.exists(host_file_path):
             mod_name = f"{feature_name}_injector"
             rel_path = f"chain_injectors.{mod_name}"
             try:
-                if ROOT_DIR not in sys.path:
-                    sys.path.insert(0, ROOT_DIR)
+                if app_root not in sys.path:
+                    sys.path.insert(0, app_root)
                 module = importlib.import_module(rel_path)
                 target_chain_type = getattr(module, 'CHAIN_TYPE', chain_type)
                 if hasattr(module, 'inject') and callable(module.inject):
                     func = module.inject
                     WorkflowAssembler._global_injectors_cache[target_chain_type] = func
-                    print(f"Successfully registered global injector (lazy): {target_chain_type} from {rel_path}")
+                    print(f"Successfully registered global injector (host): {target_chain_type} from {rel_path}")
                     return func
                 else:
                     print(f"Warning: Module '{rel_path}' for injector '{chain_type}' does not have an 'inject' function.")
             except Exception as e:
-                print(f"Error importing module '{rel_path}' for injector '{chain_type}': {e}")
+                print(f"Error importing host module '{rel_path}' for injector '{chain_type}': {e}")
+
+        # 4. Builtin package chain_injectors
+        builtin_injector_dir = os.path.join(os.path.dirname(__file__), "chain_injectors")
+        builtin_file_path = os.path.join(builtin_injector_dir, injector_filename)
+        if os.path.exists(builtin_file_path):
+            try:
+                pkg_name = __package__ or "comfy_webui_core"
+                module = importlib.import_module(f".chain_injectors.{feature_name}_injector", package=pkg_name)
+                target_chain_type = getattr(module, 'CHAIN_TYPE', chain_type)
+                if hasattr(module, 'inject') and callable(module.inject):
+                    func = module.inject
+                    WorkflowAssembler._global_injectors_cache[target_chain_type] = func
+                    print(f"Successfully registered builtin injector: {target_chain_type}")
+                    return func
+            except Exception as e:
+                print(f"Error importing builtin injector '{feature_name}_injector': {e}")
 
         return None
 
@@ -184,7 +205,7 @@ class WorkflowAssembler:
                                 self.workflow[self.node_map[target_name]]['inputs'][target_param] = ui_values[ui_key]
                         else:
                             print(f"Warning: Skipping invalid target format in ui_map for key '{ui_key}': {t}")
-        
+
         for conn in self.recipe.get('connections', []):
             if not isinstance(conn.get('to'), str) or not isinstance(conn.get('from'), str):
                 print(f"Warning: Skipping invalid connection format in recipe: {conn}")
@@ -193,11 +214,11 @@ class WorkflowAssembler:
             to_name, to_input_name = conn['to'].split(':')
             from_id, to_id = self.node_map.get(from_name), self.node_map.get(to_name)
             if from_id and to_id: self.workflow[to_id]['inputs'][to_input_name] = [from_id, int(from_output_idx)]
-        
+
         recipe_chain_types = {key for key in self.recipe if key.startswith('dynamic_')}
 
         processing_order = [key for key in self.injector_order if key in recipe_chain_types]
-        
+
         remaining_chains = sorted(list(recipe_chain_types - set(processing_order)))
         processing_order.extend(remaining_chains)
         if remaining_chains:
