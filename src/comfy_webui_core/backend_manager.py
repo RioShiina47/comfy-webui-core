@@ -23,6 +23,11 @@ class BackendManager:
         self._initialized = True
         print(f"[BackendManager] Initialized with default backend '{self.active_backend_name}'.")
 
+    @property
+    def backend_manager(self):
+        """Allow backend_manager.backend_manager to resolve to self for backward compatibility."""
+        return self
+
     def get_active_backend_url(self):
         return self.backends.get(self.active_backend_name)
 

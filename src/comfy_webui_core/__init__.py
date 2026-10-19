@@ -39,7 +39,7 @@ from . import download_utils
 from . import model_downloader
 from . import chain_injectors
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "set_app_root",
