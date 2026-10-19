@@ -1,6 +1,6 @@
 # Comfy web UI Core
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 This project is the core framework of the [comfy-webui](https://github.com/RioShiina47/comfy-webui) project.
 
@@ -45,3 +45,10 @@ While it doesn't include any specific generation features, `comfy-webui-core` pr
 ## Learn About the Full Version
 
 To see a full-featured implementation, more comprehensive module examples, and advanced usage, please refer to the main project: [comfy-webui](https://github.com/RioShiina47/comfy-webui).
+
+---
+
+## 📄 License
+
+- **Framework Code**: This project's code is licensed under the [Apache License, Version 2.0](https://opensource.org/licenses/Apache-2.0). See the [LICENSE](LICENSE) and [NOTICE](NOTICE) files for details.
+- **Notice on Usage**: When modifying or redistributing this core framework, please comply with Section 4 of the Apache 2.0 License by retaining copyright notices and prominently stating any file changes.
