@@ -8,6 +8,7 @@ from .config import (
     COMFYUI_PATH, CIVITAI_API_KEY, HUGGINGFACE_TOKEN
 )
 from .yaml_loader import load_and_merge_yaml
+from .context import get_app_root
 
 def _get_civitai_final_url(model_version_id: str):
     initial_url = f"https://civitai.com/api/download/models/{model_version_id}"
@@ -71,12 +72,15 @@ def _download_with_requests(url, destination_path):
             os.remove(destination_path)
         return False
 
-def check_and_download_models():
+def check_and_download_models(module_dirs: list[str] | None = None):
     global_file_config = load_and_merge_yaml("file_list.yaml")
     
-    module_dirs = [
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), "module")
-    ]
+    if module_dirs is None:
+        app_module_dir = os.path.join(get_app_root(), "module")
+        pkg_module_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "module")
+        module_dirs = [app_module_dir]
+        if pkg_module_dir != app_module_dir and os.path.isdir(pkg_module_dir):
+            module_dirs.append(pkg_module_dir)
     
     all_module_configs = []
     
